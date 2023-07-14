@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
-import samplePDF from "./test.pdf";
+import samplePDF from "./test2.pdf";
 import "./App.css";
 
 function App() {
@@ -20,38 +20,15 @@ function App() {
     setPageNumber((prevPageNumber) => prevPageNumber + offset);
   }
 
-  function handleThumbnailClick(page) {
-    setPageNumber(page);
-  }
-
-  function renderThumbnails() {
-    const thumbnails = [];
-    for (let i = 1; i <= numPages; i++) {
-      thumbnails.push(
-        <div
-          key={`thumbnail-${i}`}
-          className={`thumbnail ${i === pageNumber ? "active" : ""}`}
-          onClick={() => handleThumbnailClick(i)}
-        >
-          <Document file={samplePDF}>
-            <Page
-              key={`thumbnail-page-${i}`}
-              pageNumber={i}
-              width={80}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-            />
-          </Document>
-        </div>
-      );
+  function goToPage(page) {
+    if (page >= 1 && page <= numPages) {
+      setPageNumber(page);
     }
-    return thumbnails;
   }
 
   return (
     <>
       <div className="pdf-viewer">
-        <div className="thumbnails">{renderThumbnails()}</div>
         <div className="document">
           <Document file={samplePDF} onLoadSuccess={onDocumentLoadSuccess}>
             <Page pageNumber={pageNumber} width={800} />
@@ -72,6 +49,13 @@ function App() {
         >
           Next
         </button>
+        <input
+          type="number"
+          min={1}
+          max={numPages}
+          value={pageNumber}
+          onChange={(e) => goToPage(parseInt(e.target.value))}
+        />
       </div>
     </>
   );
