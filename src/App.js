@@ -10,6 +10,19 @@ function App() {
 
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
+  const [thumbnailPages, setThumbnailPages] = useState([]);
+
+  useEffect(() => {
+    if (numPages) {
+      const startPage = Math.max(1, pageNumber - 5);
+      const endPage = Math.min(numPages, pageNumber + 5);
+      const pages = [];
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      setThumbnailPages(pages);
+    }
+  }, [pageNumber, numPages]);
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
@@ -26,9 +39,32 @@ function App() {
     }
   }
 
+  function handleThumbnailClick(page) {
+    setPageNumber(page);
+  }
+
   return (
     <>
       <div className="pdf-viewer">
+        <div className="thumbnails">
+          {thumbnailPages.map((page) => (
+            <div
+              key={`thumbnail-${page}`}
+              className={`thumbnail ${page === pageNumber ? "active" : ""}`}
+              onClick={() => handleThumbnailClick(page)}
+            >
+              <Document file={samplePDF}>
+                <Page
+                  key={`thumbnail-page-${page}`}
+                  pageNumber={page}
+                  width={80}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                />
+              </Document>
+            </div>
+          ))}
+        </div>
         <div className="document">
           <Document file={samplePDF} onLoadSuccess={onDocumentLoadSuccess}>
             <Page pageNumber={pageNumber} width={800} />
