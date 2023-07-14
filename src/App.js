@@ -1,100 +1,176 @@
-import React, { useState, useEffect } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
-import samplePDF from "./test3.pdf";
-import "./App.css";
+import React, { useState, useEffect } from 'react';
+import {
+  PdfLoader,
+  PdfHighlighter,
+  Tip,
+  Highlight,
+  Popup,
+  AreaHighlight
+} from 'react-pdf-highlighter';
+// import { testHighlights as _testHighlights } from 'test-highlights';
+// import { Spinner } from './Spinner';
+// import { Sidebar } from './Sidebar';
+import './App.css';
 
-function App() {
-  useEffect(() => {
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
-  });
+// const testHighlights = _testHighlights;
 
-  const [numPages, setNumPages] = useState(null);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [thumbnailPages, setThumbnailPages] = useState([]);
+const getNextId = () => String(Math.random()).slice(2);
 
-  useEffect(() => {
-    if (numPages) {
-      const startPage = Math.max(1, pageNumber - 5);
-      const endPage = Math.min(numPages, pageNumber + 5);
-      const pages = [];
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
-      }
-      setThumbnailPages(pages);
+const parseIdFromHash = () =>
+  document.location.hash.slice('#highlight-'.length);
+
+const resetHash = () => {
+  document.location.hash = '';
+};
+
+const HighlightPopup = ({ comment }) =>
+  comment.text ? (
+    <div className="Highlight__popup">
+      {comment.emoji} {comment.text}
+    </div>
+  ) : null;
+
+const PRIMARY_PDF_URL = 'https://arxiv.org/pdf/1708.08021.pdf';
+const SECONDARY_PDF_URL = 'https://arxiv.org/pdf/1604.02480.pdf';
+
+const searchParams = new URLSearchParams(document.location.search);
+
+const initialUrl = searchParams.get('url') || PRIMARY_PDF_URL;
+
+const App = () => {
+  const [url, setUrl] = useState(initialUrl);
+  const [highlights, setHighlights] = useState([]
+  );
+
+  const resetHighlights = () => {
+    setHighlights([]);
+  };
+
+  const toggleDocument = () => {
+    const newUrl = url === PRIMARY_PDF_URL ? SECONDARY_PDF_URL : PRIMARY_PDF_URL;
+
+    setUrl(newUrl);
+    setHighlights([]);
+  };
+
+  const scrollViewerTo = (highlight) => {};
+
+  const scrollToHighlightFromHash = () => {
+    const highlight = getHighlightById(parseIdFromHash());
+
+    if (highlight) {
+      scrollViewerTo(highlight);
     }
-  }, [pageNumber, numPages]);
+  };
 
-  function onDocumentLoadSuccess({ numPages }) {
-    setNumPages(numPages);
-    setPageNumber(1);
-  }
+  useEffect(() => {
+    window.addEventListener('hashchange', scrollToHighlightFromHash, false);
 
-  function changePage(offset) {
-    setPageNumber((prevPageNumber) => prevPageNumber + offset);
-  }
+    return () => {
+      window.removeEventListener('hashchange', scrollToHighlightFromHash, false);
+    };
+  }, []);
 
-  function goToPage(page) {
-    if (page >= 1 && page <= numPages) {
-      setPageNumber(page);
-    }
-  }
+  const getHighlightById = (id) => {
+    return highlights.find((highlight) => highlight.id === id);
+  };
 
-  function handleThumbnailClick(page) {
-    setPageNumber(page);
-  }
+  const addHighlight = (highlight) => {
+    console.log('Saving highlight', highlight);
+
+    setHighlights([{ ...highlight, id: getNextId() }, ...highlights]);
+  };
+
+  const updateHighlight = (highlightId, position, content) => {
+    console.log('Updating highlight', highlightId, position, content);
+
+    setHighlights(
+      highlights.map((h) => {
+        const { id, position: originalPosition, content: originalContent, ...rest } = h;
+        return id === highlightId
+          ? {
+              id,
+              position: { ...originalPosition, ...position },
+              content: { ...originalContent, ...content },
+              ...rest
+            }
+          : h;
+      })
+    );
+  };
 
   return (
-    <>
-      <div className="pdf-viewer">
-        <div className="thumbnails">
-          {thumbnailPages.map((page) => (
-            <div
-              key={`thumbnail-${page}`}
-              className={`thumbnail ${page === pageNumber ? "active" : ""}`}
-              onClick={() => handleThumbnailClick(page)}
-            >
-              <Document file={samplePDF}>
-                <Page
-                  key={`thumbnail-page-${page}`}
-                  pageNumber={page}
-                  width={80}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
+    <div className="App" style={{ display: 'flex', height: '100vh' }}>
+      {/* <Sidebar highlights={highlights} resetHighlights={resetHighlights} toggleDocument={toggleDocument} /> */}
+      <div style={{ height: '100vh', width: '75vw', position: 'relative' }}>
+        <PdfLoader url={url} >
+          {(pdfDocument) => (
+            <PdfHighlighter
+              pdfDocument={pdfDocument}
+              enableAreaSelection={(event) => event.altKey}
+              onScrollChange={resetHash}
+              // pdfScaleValue="page-width"
+              scrollRef={(scrollTo) => {
+                scrollViewerTo = scrollTo;
+                scrollToHighlightFromHash();
+              }}
+              onSelectionFinished={(position, content, hideTipAndSelection, transformSelection) => (
+                <Tip
+                  onOpen={transformSelection}
+                  onConfirm={(comment) => {
+                    addHighlight({ content, position, comment });
+                    hideTipAndSelection();
+                  }}
                 />
-              </Document>
-            </div>
-          ))}
-        </div>
-        <div className="document">
-          <Document file={samplePDF} onLoadSuccess={onDocumentLoadSuccess}>
-            <Page pageNumber={pageNumber} width={800} />
-          </Document>
-        </div>
+              )}
+              highlightTransform={(
+                highlight,
+                index,
+                setTip,
+                hideTip,
+                viewportToScaled,
+                screenshot,
+                isScrolledTo
+              ) => {
+                const isTextHighlight = !Boolean(highlight.content && highlight.content.image);
+
+                const component = isTextHighlight ? (
+                  <Highlight
+                    isScrolledTo={isScrolledTo}
+                    position={highlight.position}
+                    comment={highlight.comment}
+                  />
+                ) : (
+                  <AreaHighlight
+                    isScrolledTo={isScrolledTo}
+                    highlight={highlight}
+                    onChange={(boundingRect) => {
+                      updateHighlight(
+                        highlight.id,
+                        { boundingRect: viewportToScaled(boundingRect) },
+                        { image: screenshot(boundingRect) }
+                      );
+                    }}
+                  />
+                );
+
+                return (
+                  <Popup
+                    popupContent={<HighlightPopup {...highlight} />}
+                    onMouseOver={(popupContent) => setTip(highlight, (highlight) => popupContent)}
+                    onMouseOut={hideTip}
+                    key={index}
+                    children={component}
+                  />
+                );
+              }}
+              highlights={highlights}
+            />
+          )}
+        </PdfLoader>
       </div>
-      <div>
-        <p>
-          Page {pageNumber || (numPages ? 1 : "--")} of {numPages || "--"}
-        </p>
-        <button type="button" disabled={pageNumber <= 1} onClick={() => changePage(-1)}>
-          Previous
-        </button>
-        <button
-          type="button"
-          disabled={pageNumber >= numPages}
-          onClick={() => changePage(1)}
-        >
-          Next
-        </button>
-        <input
-          type="number"
-          min={1}
-          max={numPages}
-          value={pageNumber}
-          onChange={(e) => goToPage(parseInt(e.target.value))}
-        />
-      </div>
-    </>
+    </div>
   );
-}
+};
 
 export default App;
