@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
-import samplePDF from "./test2.pdf";
+import samplePDF from "./test3.pdf";
 import "./App.css";
 
 function App() {
