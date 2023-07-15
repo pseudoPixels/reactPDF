@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import samplePDF from "./test3.pdf";
 import "./App.css";
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import "react-pdf/dist/esm/Page/TextLayer.css";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 
 function App() {
   useEffect(() => {
@@ -26,9 +26,24 @@ function App() {
     }
   }, [pageNumber, numPages]);
 
+  useEffect(() => {
+    window.addEventListener("mouseup", handleTextSelection);
+
+    return () => {
+      window.removeEventListener("mouseup", handleTextSelection);
+    };
+  }, []);
+
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
     setPageNumber(1);
+  }
+
+  function handleTextSelection() {
+    const selectedText = window.getSelection().toString();
+    if (selectedText) {
+      alert("Text selected: " + selectedText);
+    }
   }
 
   function changePage(offset) {
@@ -69,8 +84,12 @@ function App() {
         </div>
         <div className="document">
           <Document file={samplePDF} onLoadSuccess={onDocumentLoadSuccess}>
-            <Page pageNumber={pageNumber} width={800} renderTextLayer={true}
-                  renderAnnotationLayer={true}/>
+            <Page
+              pageNumber={pageNumber}
+              width={800}
+              renderTextLayer={true}
+              renderAnnotationLayer={true}
+            />
           </Document>
         </div>
       </div>
@@ -78,7 +97,11 @@ function App() {
         <p>
           Page {pageNumber || (numPages ? 1 : "--")} of {numPages || "--"}
         </p>
-        <button type="button" disabled={pageNumber <= 1} onClick={() => changePage(-1)}>
+        <button
+          type="button"
+          disabled={pageNumber <= 1}
+          onClick={() => changePage(-1)}
+        >
           Previous
         </button>
         <button
