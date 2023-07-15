@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import samplePDF from "./test3.pdf";
 import "./App.css";
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 
 function App() {
   useEffect(() => {
