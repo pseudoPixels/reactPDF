@@ -69,7 +69,8 @@ function App() {
         </div>
         <div className="document">
           <Document file={samplePDF} onLoadSuccess={onDocumentLoadSuccess}>
-            <Page pageNumber={pageNumber} width={800} />
+            <Page pageNumber={pageNumber} width={800} renderTextLayer={true}
+                  renderAnnotationLayer={true}/>
           </Document>
         </div>
       </div>
